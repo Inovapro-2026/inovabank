@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, User, Wallet, Mail, Phone, CreditCard, Calendar, UserPlus, CheckCircle, Sparkles, Fingerprint, Briefcase, DollarSign, CalendarDays } from 'lucide-react';
+import { Shield, User, Wallet, Mail, Phone, CreditCard, Calendar, UserPlus, CheckCircle, Sparkles, Fingerprint, Briefcase, DollarSign, CalendarDays, AlertCircle } from 'lucide-react';
 import { NumericKeypad } from '@/components/NumericKeypad';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -599,7 +599,7 @@ export default function Login() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium flex items-center gap-2">
                       <Phone className="w-3.5 h-3.5 text-primary" />
-                      Número de telefone
+                      Número de telefone (WhatsApp) *
                     </label>
                     <Input
                       type="tel"
@@ -609,6 +609,10 @@ export default function Login() {
                       className="bg-muted/30 border-border h-10 text-sm"
                       maxLength={15}
                     />
+                    <p className="text-[10px] text-amber-500 flex items-center gap-1 mt-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Informe um número válido. Sua matrícula será enviada por WhatsApp.
+                    </p>
                   </div>
                 </div>
 
