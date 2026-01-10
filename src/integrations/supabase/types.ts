@@ -447,6 +447,7 @@ export type Database = {
           id: string
           initial_balance: number | null
           matricula: number
+          payment_proof_url: string | null
           phone: string | null
           salary_amount: number | null
           salary_day: number | null
@@ -469,6 +470,7 @@ export type Database = {
           id?: string
           initial_balance?: number | null
           matricula: number
+          payment_proof_url?: string | null
           phone?: string | null
           salary_amount?: number | null
           salary_day?: number | null
@@ -491,6 +493,7 @@ export type Database = {
           id?: string
           initial_balance?: number | null
           matricula?: number
+          payment_proof_url?: string | null
           phone?: string | null
           salary_amount?: number | null
           salary_day?: number | null

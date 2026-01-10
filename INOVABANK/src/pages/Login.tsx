@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, User, Wallet, Mail, Phone, CreditCard, Calendar, UserPlus, CheckCircle, Sparkles, Fingerprint, Briefcase, DollarSign, CalendarDays, AlertCircle } from 'lucide-react';
+import { Shield, User, Wallet, Mail, Phone, CreditCard, Calendar, UserPlus, CheckCircle, Sparkles, Fingerprint, Briefcase, DollarSign, CalendarDays, AlertCircle, Upload, FileCheck, X } from 'lucide-react';
 import { NumericKeypad } from '@/components/NumericKeypad';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,7 +16,7 @@ import {
   getBiometricMatricula
 } from '@/services/biometricService';
 
-type Step = 'matricula' | 'register' | 'success';
+type Step = 'matricula' | 'payment_proof' | 'register' | 'success';
 
 // Componente de fundo memoizado para evitar re-renderizações caras
 const AnimatedBackground = memo(({ introPhase }: { introPhase: string }) => (
@@ -84,6 +84,8 @@ export default function Login() {
   const [salaryDay, setSalaryDay] = useState('');
   const [advanceAmount, setAdvanceAmount] = useState('');
   const [advanceDay, setAdvanceDay] = useState('');
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [paymentProofPreview, setPaymentProofPreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -225,6 +227,51 @@ export default function Login() {
     }
   };
 
+  // Handle payment proof file selection
+  const handlePaymentProofChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Formato não suportado. Use JPG, PNG, WEBP ou PDF.');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Arquivo muito grande. Máximo 5MB.');
+        return;
+      }
+      setPaymentProofFile(file);
+      setError('');
+      
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPaymentProofPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPaymentProofPreview(null);
+      }
+    }
+  };
+
+  const removePaymentProof = () => {
+    setPaymentProofFile(null);
+    setPaymentProofPreview(null);
+  };
+
+  const handleContinueToRegister = () => {
+    if (!paymentProofFile) {
+      setError('Envie o comprovante de pagamento para continuar');
+      return;
+    }
+    setError('');
+    setStep('register');
+  };
+
   const handleRegister = async () => {
     if (!fullName.trim()) {
       setError('Digite seu nome completo');
@@ -234,6 +281,10 @@ export default function Login() {
       setError('Digite seu email');
       return;
     }
+    if (!paymentProofFile) {
+      setError('Comprovante de pagamento é obrigatório');
+      return;
+    }
 
     setIsLoading(true);
     setError('');
@@ -241,6 +292,24 @@ export default function Login() {
     try {
       // Gerar matrícula única
       const newMatricula = await generateMatricula();
+      
+      // Upload payment proof to storage
+      let paymentProofUrl: string | null = null;
+      if (paymentProofFile) {
+        const fileExt = paymentProofFile.name.split('.').pop();
+        const fileName = `${newMatricula}_${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('payment-proofs')
+          .upload(fileName, paymentProofFile);
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Continue without the payment proof URL if upload fails
+        } else {
+          paymentProofUrl = uploadData?.path || null;
+        }
+      }
       
       // Criar usuário no Supabase
       const { error: insertError } = await supabase
@@ -259,6 +328,7 @@ export default function Login() {
           salary_day: isClt ? (parseInt(salaryDay) || 5) : 5,
           advance_amount: isClt ? (parseFloat(advanceAmount) || 0) : 0,
           advance_day: isClt && advanceDay ? (parseInt(advanceDay) || null) : null,
+          payment_proof_url: paymentProofUrl,
         });
       
       if (insertError) throw insertError;
@@ -536,13 +606,141 @@ export default function Login() {
                     <div className="mt-6 pt-4 border-t border-border">
                       <button
                         onClick={() => {
-                          setStep('register');
+                          setStep('payment_proof');
                           setError('');
                         }}
                         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-secondary/20 hover:bg-secondary/30 transition-colors text-secondary font-medium"
                       >
                         <UserPlus className="w-5 h-5" />
                         Criar conta
+                      </button>
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              )}
+
+              {/* Payment Proof Step */}
+              {step === 'payment_proof' && (
+                <motion.div
+                  key="payment_proof"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full max-w-sm"
+                >
+                  <GlassCard className="p-6">
+                    <h2 className="text-xl font-semibold text-center mb-2">
+                      Comprovante de Pagamento
+                    </h2>
+                    
+                    {/* Aviso importante */}
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-amber-200 font-medium mb-1">
+                            Atenção: Pagamento obrigatório
+                          </p>
+                          <p className="text-xs text-amber-200/80">
+                            Para ativar sua conta, é necessário enviar o comprovante do pagamento da taxa de adesão. Seu cadastro será analisado após o envio.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload Card */}
+                    <div className="space-y-4">
+                      <label className="text-sm font-medium flex items-center gap-2">
+                        <FileCheck className="w-4 h-4 text-primary" />
+                        Enviar comprovante
+                      </label>
+                      
+                      {!paymentProofFile ? (
+                        <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-10 h-10 text-muted-foreground mb-3" />
+                            <p className="text-sm text-muted-foreground mb-1">
+                              <span className="font-medium text-primary">Clique para enviar</span>
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              JPG, PNG, WEBP ou PDF (máx. 5MB)
+                            </p>
+                          </div>
+                          <input 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={handlePaymentProofChange}
+                          />
+                        </label>
+                      ) : (
+                        <div className="relative border border-border rounded-xl p-4 bg-muted/30">
+                          <button
+                            onClick={removePaymentProof}
+                            className="absolute -top-2 -right-2 w-6 h-6 bg-destructive rounded-full flex items-center justify-center text-white hover:bg-destructive/80 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          
+                          {paymentProofPreview ? (
+                            <img 
+                              src={paymentProofPreview} 
+                              alt="Comprovante" 
+                              className="w-full h-32 object-contain rounded-lg"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <FileCheck className="w-10 h-10 text-primary" />
+                              <div>
+                                <p className="text-sm font-medium truncate max-w-[180px]">
+                                  {paymentProofFile.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {(paymentProofFile.size / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 mt-3 text-emerald-500">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-xs font-medium">Arquivo selecionado</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {error && (
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-destructive text-sm text-center mt-4"
+                      >
+                        {error}
+                      </motion.p>
+                    )}
+
+                    {/* Buttons */}
+                    <div className="flex flex-col gap-3 mt-6">
+                      <Button
+                        onClick={handleContinueToRegister}
+                        disabled={!paymentProofFile}
+                        className="w-full bg-gradient-primary glow-primary"
+                      >
+                        Continuar cadastro
+                      </Button>
+                      
+                      <button
+                        onClick={() => {
+                          setStep('matricula');
+                          setPaymentProofFile(null);
+                          setPaymentProofPreview(null);
+                          setError('');
+                        }}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        ← Voltar
                       </button>
                     </div>
                   </GlassCard>
