@@ -43,7 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const profile = await getProfile(matricula);
       if (profile) {
-        setUser(profile);
+        // Only set user if approved - otherwise clear the session
+        if (profile.userStatus === 'approved') {
+          setUser(profile);
+        } else {
+          // User is not approved, clear stored matricula
+          localStorage.removeItem('inovabank_matricula');
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Error loading user:', error);
@@ -87,14 +94,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           creditAvailable: 0,
           creditUsed: 0,
           creditDueDay: creditDueDay,
+          userStatus: 'pending',
         });
         profile = await getProfile(matricula);
       }
       
       if (profile) {
-        setUser(profile);
-        localStorage.setItem('inovabank_matricula', matricula.toString());
-        return true;
+        // Only allow login for approved users
+        if (profile.userStatus === 'approved') {
+          setUser(profile);
+          localStorage.setItem('inovabank_matricula', matricula.toString());
+          return true;
+        }
+        // User exists but not approved
+        return false;
       }
       
       return false;

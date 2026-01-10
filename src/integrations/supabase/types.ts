@@ -450,6 +450,7 @@ export type Database = {
           phone: string | null
           salary_amount: number | null
           salary_day: number | null
+          user_status: Database["public"]["Enums"]["user_status"]
         }
         Insert: {
           advance_amount?: number | null
@@ -471,6 +472,7 @@ export type Database = {
           phone?: string | null
           salary_amount?: number | null
           salary_day?: number | null
+          user_status?: Database["public"]["Enums"]["user_status"]
         }
         Update: {
           advance_amount?: number | null
@@ -492,6 +494,7 @@ export type Database = {
           phone?: string | null
           salary_amount?: number | null
           salary_day?: number | null
+          user_status?: Database["public"]["Enums"]["user_status"]
         }
         Relationships: []
       }
@@ -510,6 +513,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      user_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -638,6 +642,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      user_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
