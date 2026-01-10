@@ -16,7 +16,7 @@ import {
   getBiometricMatricula
 } from '@/services/biometricService';
 
-type Step = 'matricula' | 'register' | 'success';
+type Step = 'matricula' | 'register' | 'success' | 'pending' | 'rejected';
 
 // Componente de fundo memoizado para evitar re-renderizações caras
 const AnimatedBackground = memo(({ introPhase }: { introPhase: string }) => (
@@ -142,12 +142,29 @@ export default function Login() {
         
         if (fetchError) throw fetchError;
         
-        if (existingUser) {
-          const success = await login(storedMatricula, existingUser.full_name || '');
-          if (success) {
-            navigate('/');
+      if (existingUser) {
+          // Check user status for biometric login too
+          const userStatus = existingUser.user_status as string;
+          
+          if (userStatus === 'pending') {
+            setStep('pending');
+            return;
+          }
+          
+          if (userStatus === 'rejected') {
+            setStep('rejected');
+            return;
+          }
+          
+          if (userStatus === 'approved') {
+            const success = await login(storedMatricula, existingUser.full_name || '');
+            if (success) {
+              navigate('/');
+            } else {
+              setError('Erro ao fazer login');
+            }
           } else {
-            setError('Erro ao fazer login');
+            setError('Status de conta inválido');
           }
         } else {
           setError('Usuário não encontrado');
@@ -207,12 +224,29 @@ export default function Login() {
       if (fetchError) throw fetchError;
       
       if (existingUser) {
-        // Login do usuário existente
-        const success = await login(parseInt(matricula), existingUser.full_name || '');
-        if (success) {
-          navigate('/');
+        // Check user status before allowing login
+        const userStatus = existingUser.user_status as string;
+        
+        if (userStatus === 'pending') {
+          setStep('pending');
+          return;
+        }
+        
+        if (userStatus === 'rejected') {
+          setStep('rejected');
+          return;
+        }
+        
+        // Only approved users can login
+        if (userStatus === 'approved') {
+          const success = await login(parseInt(matricula), existingUser.full_name || '');
+          if (success) {
+            navigate('/');
+          } else {
+            setError('Erro ao fazer login');
+          }
         } else {
-          setError('Erro ao fazer login');
+          setError('Status de conta inválido');
         }
       } else {
         setError('Matrícula não encontrada. Crie uma conta.');
@@ -282,12 +316,10 @@ export default function Login() {
         dueDay
       );
       
-      if (success) {
-        setGeneratedMatricula(newMatricula.toString());
-        setStep('success');
-      } else {
-        setError('Erro ao criar conta');
-      }
+      // Don't login the user - account needs admin approval
+      // Just show success screen with pending message
+      setGeneratedMatricula(newMatricula.toString());
+      setStep('success');
     } catch (err) {
       console.error(err);
       setError('Erro ao registrar. Tente novamente.');
@@ -297,7 +329,22 @@ export default function Login() {
   };
 
   const handleGoToLogin = () => {
-    setMatricula(generatedMatricula);
+    // Logout and go back to login screen
+    setMatricula('');
+    setGeneratedMatricula('');
+    setFullName('');
+    setEmail('');
+    setPhone('');
+    setInitialBalance('');
+    setCreditLimit('');
+    setCreditDueDay('');
+    setCreditAvailable('');
+    setHasCreditCard(null);
+    setIsClt(null);
+    setSalaryAmount('');
+    setSalaryDay('');
+    setAdvanceAmount('');
+    setAdvanceDay('');
     setStep('matricula');
   };
 
@@ -879,14 +926,14 @@ export default function Login() {
                   className="w-full max-w-sm"
                 >
             <GlassCard className="p-8 text-center">
-              {/* Success Animation */}
+              {/* Pending Analysis Animation */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', delay: 0.2 }}
-                className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center"
+                className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center"
               >
-                <CheckCircle className="w-10 h-10 text-white" />
+                <Shield className="w-10 h-10 text-white" />
               </motion.div>
 
               <motion.div
@@ -894,14 +941,12 @@ export default function Login() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-                  <Sparkles className="w-6 h-6 text-yellow-500" />
-                  Parabéns!
-                  <Sparkles className="w-6 h-6 text-yellow-500" />
+                <h2 className="text-xl font-bold mb-2">
+                  Cadastro enviado para análise
                 </h2>
-                <p className="text-muted-foreground mb-6">
-                  Sua conta foi criada com sucesso!<br />
-                  Você está pronto para economizar.
+                <p className="text-muted-foreground text-sm mb-6">
+                  Seu cadastro foi recebido e está aguardando aprovação do administrador.<br />
+                  Assim que for aprovado, você poderá acessar todas as funcionalidades do INOVABANK.
                 </p>
               </motion.div>
 
@@ -921,14 +966,14 @@ export default function Login() {
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ delay: 0.8 + i * 0.1, type: 'spring' }}
-                      className="w-12 h-14 rounded-xl bg-gradient-primary flex items-center justify-center text-2xl font-bold text-white glow-primary"
+                      className="w-12 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg"
                     >
                       {digit}
                     </motion.div>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Guarde esse número! Você usará ele para fazer login.
+                  Guarde sua matrícula. Você usará ela para acessar sua conta após aprovação.
                 </p>
               </motion.div>
 
@@ -939,9 +984,109 @@ export default function Login() {
               >
                 <Button
                   onClick={handleGoToLogin}
-                  className="w-full bg-gradient-primary hover:opacity-90 glow-primary"
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:opacity-90"
                 >
-                  Fazer login
+                  Entendi
+                </Button>
+              </motion.div>
+            </GlassCard>
+                </motion.div>
+              )}
+
+              {/* Pending Status Screen - when user tries to login */}
+              {step === 'pending' && (
+                <motion.div
+                  key="pending"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="w-full max-w-sm"
+                >
+            <GlassCard className="p-8 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.2 }}
+                className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center"
+              >
+                <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <h2 className="text-xl font-bold mb-2">
+                  ⏳ Conta em análise
+                </h2>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Seu cadastro ainda não foi aprovado pelo administrador.<br />
+                  Aguarde a aprovação para acessar sua conta.
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+              >
+                <Button
+                  onClick={() => setStep('matricula')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Sair
+                </Button>
+              </motion.div>
+            </GlassCard>
+                </motion.div>
+              )}
+
+              {/* Rejected Status Screen */}
+              {step === 'rejected' && (
+                <motion.div
+                  key="rejected"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="w-full max-w-sm"
+                >
+            <GlassCard className="p-8 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', delay: 0.2 }}
+                className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center"
+              >
+                <UserPlus className="w-10 h-10 text-white" />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <h2 className="text-xl font-bold mb-2 text-red-400">
+                  ❌ Cadastro não aprovado
+                </h2>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Seu cadastro foi analisado e não foi aprovado.<br />
+                  Entre em contato com o suporte para mais informações.
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+              >
+                <Button
+                  onClick={() => setStep('matricula')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Voltar
                 </Button>
               </motion.div>
             </GlassCard>

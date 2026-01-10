@@ -18,7 +18,8 @@ import {
   Settings,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  UserCheck
 } from "lucide-react";
 
 // Import admin tabs
@@ -27,6 +28,7 @@ import { AdminClients } from "@/components/admin/AdminClients";
 import { AdminFinancial } from "@/components/admin/AdminFinancial";
 import { AdminPlanning } from "@/components/admin/AdminPlanning";
 import { AdminSettings } from "@/components/admin/AdminSettings";
+import { AdminApprovals } from "@/components/admin/AdminApprovals";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -244,6 +246,13 @@ export default function Admin() {
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger 
+              value="approvals" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Aprovações</span>
+            </TabsTrigger>
+            <TabsTrigger 
               value="clients" 
               className="data-[state=active]:bg-primary data-[state=active]:text-white flex items-center gap-2"
             >
@@ -283,6 +292,9 @@ export default function Admin() {
             >
               <TabsContent value="dashboard" className="mt-0">
                 <AdminDashboard />
+              </TabsContent>
+              <TabsContent value="approvals" className="mt-0">
+                <AdminApprovals />
               </TabsContent>
               <TabsContent value="clients" className="mt-0">
                 <AdminClients />

@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
+export type UserStatus = 'pending' | 'approved' | 'rejected';
+
 export interface Profile {
   id: string;
   userId: number; // matricula
@@ -15,6 +17,7 @@ export interface Profile {
   salaryAmount?: number;
   salaryDay?: number;
   createdAt: Date;
+  userStatus: UserStatus;
 }
 
 export interface Transaction {
@@ -67,6 +70,7 @@ export async function getProfile(matricula: number): Promise<Profile | undefined
     salaryAmount: Number(data.salary_amount) || 0,
     salaryDay: data.salary_day || 5,
     createdAt: new Date(data.created_at),
+    userStatus: (data.user_status as UserStatus) || 'pending',
   };
 }
 
@@ -84,6 +88,7 @@ export async function createProfile(profile: Omit<Profile, 'id' | 'createdAt'>):
       credit_available: profile.creditAvailable,
       credit_used: profile.creditUsed,
       credit_due_day: profile.creditDueDay || null,
+      user_status: profile.userStatus || 'pending',
     })
     .select('id')
     .single();
