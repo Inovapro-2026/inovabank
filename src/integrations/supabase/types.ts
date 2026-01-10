@@ -41,6 +41,96 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_commissions: {
+        Row: {
+          affiliate_matricula: number
+          amount: number
+          created_at: string
+          id: string
+          invited_matricula: number
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          affiliate_matricula: number
+          amount?: number
+          created_at?: string
+          id?: string
+          invited_matricula: number
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          affiliate_matricula?: number
+          amount?: number
+          created_at?: string
+          id?: string
+          invited_matricula?: number
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_commissions_affiliate_matricula_fkey"
+            columns: ["affiliate_matricula"]
+            isOneToOne: false
+            referencedRelation: "users_matricula"
+            referencedColumns: ["matricula"]
+          },
+          {
+            foreignKeyName: "affiliate_commissions_invited_matricula_fkey"
+            columns: ["invited_matricula"]
+            isOneToOne: true
+            referencedRelation: "users_matricula"
+            referencedColumns: ["matricula"]
+          },
+        ]
+      }
+      affiliate_invites: {
+        Row: {
+          created_at: string
+          id: string
+          invited_matricula: number
+          inviter_matricula: number
+          reviewed_at: string | null
+          reviewed_by_admin: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_matricula: number
+          inviter_matricula: number
+          reviewed_at?: string | null
+          reviewed_by_admin?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_matricula?: number
+          inviter_matricula?: number
+          reviewed_at?: string | null
+          reviewed_by_admin?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_invites_invited_matricula_fkey"
+            columns: ["invited_matricula"]
+            isOneToOne: true
+            referencedRelation: "users_matricula"
+            referencedColumns: ["matricula"]
+          },
+          {
+            foreignKeyName: "affiliate_invites_inviter_matricula_fkey"
+            columns: ["inviter_matricula"]
+            isOneToOne: false
+            referencedRelation: "users_matricula"
+            referencedColumns: ["matricula"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string | null
