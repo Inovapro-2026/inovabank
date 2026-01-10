@@ -16,10 +16,19 @@ import {
   User,
   Mail,
   Calendar,
-  Link2
+  Link2,
+  FileText,
+  ExternalLink,
+  ImageIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface PendingUser {
   id: string;
@@ -29,6 +38,7 @@ interface PendingUser {
   phone: string | null;
   created_at: string;
   user_status: string;
+  payment_proof_url: string | null;
   inviter_matricula?: number;
   inviter_name?: string;
 }
@@ -37,6 +47,8 @@ export function AdminApprovals() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [proofDialogOpen, setProofDialogOpen] = useState(false);
+  const [selectedProof, setSelectedProof] = useState<{ url: string; userName: string } | null>(null);
   const { toast } = useToast();
 
   // Stats
@@ -335,6 +347,32 @@ export function AdminApprovals() {
                         )}
                       </div>
 
+                      {/* Payment Proof Button */}
+                      <div className="flex items-center">
+                        {user.payment_proof_url ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedProof({
+                                url: user.payment_proof_url!,
+                                userName: user.full_name || `#${user.matricula}`
+                              });
+                              setProofDialogOpen(true);
+                            }}
+                            className="bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600/30"
+                          >
+                            <FileText className="w-4 h-4 mr-1" />
+                            Ver Comprovante
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-slate-500 flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3" />
+                            Sem comprovante
+                          </span>
+                        )}
+                      </div>
+
                       {/* Actions */}
                       <div className="flex items-center gap-2">
                         <Button
@@ -376,6 +414,63 @@ export function AdminApprovals() {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Payment Proof Dialog */}
+      <Dialog open={proofDialogOpen} onOpenChange={setProofDialogOpen}>
+        <DialogContent className="max-w-2xl bg-slate-900 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-400" />
+              Comprovante de Pagamento - {selectedProof?.userName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedProof && (
+            <div className="space-y-4">
+              {/* Preview */}
+              <div className="bg-slate-800 rounded-lg p-4 flex items-center justify-center min-h-[300px]">
+                {selectedProof.url.toLowerCase().endsWith('.pdf') ? (
+                  <div className="text-center">
+                    <FileText className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <p className="text-slate-300 mb-2">Arquivo PDF</p>
+                    <Button
+                      onClick={() => window.open(selectedProof.url, '_blank')}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Abrir PDF
+                    </Button>
+                  </div>
+                ) : (
+                  <img
+                    src={selectedProof.url}
+                    alt="Comprovante de pagamento"
+                    className="max-w-full max-h-[400px] object-contain rounded-lg"
+                  />
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(selectedProof.url, '_blank')}
+                  className="bg-slate-800 border-slate-700 text-white"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Abrir em nova aba
+                </Button>
+                <Button
+                  onClick={() => setProofDialogOpen(false)}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
