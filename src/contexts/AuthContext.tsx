@@ -17,7 +17,13 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Keep a single Context instance across Fast Refresh/HMR to avoid "used within a provider" false negatives.
+const AuthContext: React.Context<AuthContextType | undefined> =
+  ((globalThis as unknown as { __INOVABANK_AUTH_CONTEXT__?: React.Context<AuthContextType | undefined> })
+    .__INOVABANK_AUTH_CONTEXT__) ?? createContext<AuthContextType | undefined>(undefined);
+
+(globalThis as unknown as { __INOVABANK_AUTH_CONTEXT__?: React.Context<AuthContextType | undefined> }).__INOVABANK_AUTH_CONTEXT__ =
+  AuthContext;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Profile | null>(null);
